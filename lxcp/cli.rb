@@ -1,59 +1,88 @@
+require 'thor'
 require './lxcp/lxcp.rb'
 
 module LXCP
-  module CLI
-    module_function
+  class CLI < Thor
+    package_name "lxcp"
+    
+    desc "create [-p|--prod] <name> [<ip> [<port>]] [-t <template>|--template <template>]", "Create a new container and configure host/container."
+    option :prod, :type => :boolean, :aliases => "p"
+    option :template, :default => "debian", :aliases => "t"
+    def create name, ip=nil, port=80
+      template = options[:template]
+      c = LXCP::create(name, template, ip)
 
-    def create(name, template=nil, ip=nil)
-      container = LXCP::create(name, template, ip)
-
-      if !container
-        puts "Error during \"" + name + "\" creation."
+      unless c
+        puts "This container name is already in use."
+      else
+        puts "Container IP : " + c.ip_addresses.join(', ')
       end
     end
+    
+    desc "pack <name>", "Create an archive from an existing container. Will need to freeze the container."
+    def pack name
+    end
+    
+    desc "deploy [-p] <template> [<name>]", "Deploy a container from a previously created archive. Will (re)configure the host/container."
+    option :prod, :type => :boolean, :aliases => "p"
+    def deploy name
+    end
+    
+    desc "destroy <name>", "Destroy a container"
+    def destroy name
+      LXCP::destroy(name)
+    
+      puts "Container successfully deleted."
+    end
+    
+    desc "start <name>", "Start the given container"
+    def start name
+      c = LXCP::start(name)
+      
+      if c
+        puts "Container started. IP: " + c.ip_addresses
+      end
+    end
+    
+    desc "stop <name>", "Stop the given container"
+    def stop name
+      c = LXCP::stop(name)
+      
+      if c
+        puts "Container stopped."
+      end
+    end
+    
+    desc "autostart <name>", "Toggle the autostart flag"
+    def autostart name
+      puts "Autostart flag " + (LXCP::toggle_autostart(name) ? "added" : "deleted") + "."
+    end
 
+    desc "list", "List all containers"
     def list
       containers = LXCP::list
 
       for c in containers
-        print c.name
-        print " - "
-
-        if c.running?
-            print "RUNNING"
-        else
-            print "STOPPED"
-        end
-
-        print " - "
+        print c.name + " - " + c.state.to_s + " - "
         print "IP: " + c.ip_addresses.join(', ')
-
+        print " - Autostart flag " + (c.autostart? ? "set" : "not set")
         print "\n"
       end
     end
     
-    def get_config(name=nil)
-      unless name.nil?
-        puts name + ": " + LXC::global_config_item(name)
+    desc "config [<name> [<value>]]", "Get/Set global configuration"
+    def config name=nil, value=nil
+      unless name.nil? || value.nil?
+        LXCP::set_global_config name, value
       else
-        [
-          'lxc.default_config', 
-          'lxc.lxcpath', 
-          'lxc.bdev.lvm.vg', 
-          'lxc.bdev.lvm.thin_pool', 
-          'lxc.bdev.zfs.root'
-        ].each { |item| get_config item }
+        LXCP::get_global_config name
       end
     end
     
-    def set_config(name, value)
-      
-    end
-
+    desc "version", "Show LXC & LXCP versions"
     def version
       puts "LXCP Version: " + LXCP::version
       puts "LXC Version: " + LXC::version
     end
   end
 end
-
