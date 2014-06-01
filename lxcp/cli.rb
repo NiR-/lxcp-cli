@@ -37,19 +37,39 @@ module LXCP
     
     desc "start <name>", "Start the given container"
     def start name
-      c = LXCP::start(name)
+      c = LXCP::start name
       
       if c
-        puts "Container started. IP: " + c.ip_addresses
+        puts "Container started. IP: " + c.ip_addresses.join(', ')
       end
     end
     
     desc "stop <name>", "Stop the given container"
     def stop name
-      c = LXCP::stop(name)
+      c = LXCP::stop name
       
       if c
         puts "Container stopped."
+      end
+    end
+    
+    desc "freeze <name>", "Freeze the container."
+    def freeze name
+      begin
+        LXCP::freeze name
+        puts "The container has been frozen."
+      rescue LXCP::Exception => e
+        puts e.message
+      end
+    end
+    
+    desc "unfreeze <name>", "Unfreeze the container."
+    def unfreeze name
+      begin
+        LXCP::unfreeze name
+        puts "The container has been unfrozen."
+      rescue LXCP::Exception => e
+        puts e.message
       end
     end
     

@@ -1,4 +1,5 @@
 require './lxcp/container.rb'
+require './lxcp/exception.rb'
 
 module LXCP
   @@config = {
@@ -59,6 +60,14 @@ module LXCP
     c.save_config
   end
   
+  def pack name
+    c = Container.new name
+    c.freeze
+    
+    puts c.state.to_s
+    puts c.running?.to_s
+  end
+  
   def destroy name
     c = Container.new name
     
@@ -100,6 +109,36 @@ module LXCP
       c.stop
     else
       raise "This container is already stopped."
+    end
+  end
+  
+  def freeze name
+    c = Container.new name
+    
+    unless c.defined?
+      raise Exception, "Container \"" + name + "\" does not exist."
+    end
+    
+    unless c.running?
+      raise Exception, "Container \"" + name + "\" not running."
+    else
+      c.freeze
+    end
+  end
+  
+  def unfreeze name
+    c = Container.new name
+    
+    unless c.defined?
+      raise Exception, "Container \"" + name + "\" does not exist."
+    end
+    
+    if !c.running?
+      raise Exception, "Container \"" + name + "\" is not running."
+    elsif c.state != :frozen
+      raise Exception, "Container \"" + name + "\" is not frozen."
+    else
+      c.unfreeze
     end
   end
   
