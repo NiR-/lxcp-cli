@@ -31,11 +31,11 @@ module LXCP
       rescue LXC::Error
       end
 
-      addresses[:ipv4].concat(addresses[:ipv6])
+      addresses[:ipv4].concat addresses[:ipv6]
     end
 
     def autostart?
-      config_item("lxc.start.auto")
+      config_item "lxc.start.auto"
     end
     
     def autostart! auto=true
@@ -49,7 +49,7 @@ module LXCP
     end
     
     def set_hostname hostname
-      File.write(rootfs + "/etc/hostname", hostname)
+      File.write rootfs + "/etc/hostname", hostname
     end
     
     def rootfs
@@ -57,7 +57,7 @@ module LXCP
     end
     
     def configure_network ip, gateway
-      File.write(rootfs + "/etc/network/interfaces", <<END
+      File.write rootfs + "/etc/network/interfaces", <<END
 auto lo
 iface lo inet loopback
  
@@ -67,7 +67,14 @@ iface eth0 inet static
     netmask 255.255.255.0
     gateway #{gateway}
 END
-)
+    end
+    
+    def frozen?
+      state == :frozen
+    end
+    
+    def stoped?
+      state == :stopped
     end
   end
 end

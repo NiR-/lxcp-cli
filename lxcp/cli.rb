@@ -10,7 +10,7 @@ module LXCP
     option :template, :default => "debian", :aliases => "t"
     def create name, ip=nil, port=80
       template = options[:template]
-      c = LXCP::create(name, template, ip)
+      c = LXCP::create name, template, ip
 
       unless c
         puts "This container name is already in use."
@@ -21,6 +21,11 @@ module LXCP
     
     desc "pack <name>", "Create an archive from an existing container. Will need to freeze the container."
     def pack name
+      begin
+        LXCP::pack name
+      rescue LXCP::Exception => e
+        puts e.message
+      end
     end
     
     desc "deploy [-p] <template> [<name>]", "Deploy a container from a previously created archive. Will (re)configure the host/container."

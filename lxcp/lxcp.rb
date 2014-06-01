@@ -46,8 +46,8 @@ module LXCP
     c.create template
     
     # Configure container network
-    c.set_config_item('lxc.network.ipv4', ip + "/24")
-    c.set_config_item('lxc.network.ipv4.gateway', gateway)
+    c.set_config_item 'lxc.network.ipv4', ip + "/24"
+    c.set_config_item 'lxc.network.ipv4.gateway', gateway
     
     c.set_domains domains
     c.set_hostname domains.last
@@ -62,10 +62,12 @@ module LXCP
   
   def pack name
     c = Container.new name
-    c.freeze
     
-    puts c.state.to_s
-    puts c.running?.to_s
+    unless c.frozen?
+      c.freeze
+    end
+    
+    
   end
   
   def destroy name
@@ -75,7 +77,7 @@ module LXCP
       raise "Container \"" + name + "\" does not exist."
     end
     
-    if c.running?
+    unless c.stopped?
       c.stop
     end
     
@@ -133,13 +135,15 @@ module LXCP
       raise Exception, "Container \"" + name + "\" does not exist."
     end
     
-    if !c.running?
+    unless c.running?
       raise Exception, "Container \"" + name + "\" is not running."
-    elsif c.state != :frozen
-      raise Exception, "Container \"" + name + "\" is not frozen."
-    else
-      c.unfreeze
     end
+    
+    unless c.frozen?
+      raise Exception, "Container \"" + name + "\" is not frozen."
+    end
+    
+    c.unfreeze
   end
   
   def toggle_autostart name
@@ -213,9 +217,7 @@ module LXCP
     else
       f = File.readlines(@@config[:hosts_file])
       
-      f.reject! do |item|
-         /^#{ip}/ =~ item
-      end
+      f.reject! { /^#{ip}/ =~ item }
       
       File.write(@@config[:hosts_file], f.join)
     end
