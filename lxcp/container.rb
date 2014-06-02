@@ -57,6 +57,10 @@ module LXCP
     end
     
     def configure_network ip, gateway
+      set_config_item 'lxc.network.ipv4', ip + "/24"
+      set_config_item 'lxc.network.ipv4.gateway', gateway
+      save_config
+      
       File.write rootfs + "/etc/network/interfaces", <<END
 auto lo
 iface lo inet loopback
@@ -69,12 +73,12 @@ iface eth0 inet static
 END
     end
     
-    def frozen?
-      state == :frozen
+    def stopped?
+      state == :stopped
     end
     
-    def stoped?
-      state == :stopped
+    def frozen?
+      state == :frozen
     end
   end
 end

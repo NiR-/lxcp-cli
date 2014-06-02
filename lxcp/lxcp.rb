@@ -5,6 +5,7 @@ module LXCP
   @@config = {
     :hosts_file => '/etc/hosts',
     :lxc_path   => LXC.global_config_item('lxc.lxcpath'),  
+    :temp_path  => '/tmp', 
     
     :config_path  => '/etc/lxc/lxc.conf', 
     :config_items => [
@@ -29,45 +30,77 @@ module LXCP
 
   module_function
 
-  @version = "0.0.1"
+  @version = "0.1"
   def version; return @version end
 
   def create name, template, ip=nil
-    c = Container.new(name)
+    c = Container.new name
 
     unless !c.defined?
-      raise "This container name is already in use."
+      raise Exception, "This container name is already in use."
     end
     
-    ip = determine_ip if ip.nil?
-    gateway = @@config[:network][:address] + ".1"
-    domains = @@config[:domains].each { |v| v["$0"] = name  }
-    
     c.create template
+    configure name, ip
     
-    # Configure container network
-    c.set_config_item 'lxc.network.ipv4', ip + "/24"
-    c.set_config_item 'lxc.network.ipv4.gateway', gateway
-    
-    c.set_domains domains
-    c.set_hostname domains.last
-    
-    add_ip_to_hosts_file ip, domains
-    
-    c.configure_network ip, gateway
-    c.autostart!
-    
-    c.save_config
+    return c
   end
   
-  def pack name
+  def pack name, dest=nil
     c = Container.new name
+    path = @@config[:lxc_path] + '/' + name
     
-    unless c.frozen?
+    if !c.defined?
+      raise Exception, "Container \"" + name + "\" does not exist."
+    end
+    
+    if c.running? && !c.frozen?
       c.freeze
     end
     
+    dest ||= @@config[:lxc_path] + "/lxcp-" + name + ".tgz"
     
+    system 'tar zcf ' + dest + ' -C ' + path + ' ./ 2>&1'
+    unless $?.success?
+      raise Exception, "Error during packing."
+    end
+    
+    c.unfreeze
+    
+    dest
+  end
+  
+  def deploy template, name=nil
+    temp_name = "lxcp-" + Time.now.getutc.to_i.to_s
+    temp_path = @@config[:temp_path] + "/" + temp_name
+    
+    Dir.mkdir temp_path
+    system 'tar zxf ' + template + ' -C ' + temp_path
+    
+    begin
+      unless $?.success?
+        raise Exception, "Error during unpacking."
+      end
+      
+      if name.nil?
+        c = LXCP::Container.new temp_name, @@config[:temp_path]
+        name = c.config_item "lxc.utsname"
+      end
+      
+      final_path = @@config[:lxc_path] + "/" + name
+      
+      if Dir.exists? final_path
+        raise Exception, "This name (\"" + name + "\") is already in use. You need to provide your own container name if you want to deploy it."
+      end
+      
+      FileUtils.mv temp_path, final_path
+      
+      configure name
+    ensure
+      if Dir.exists? temp_path
+        FileUtils.rmtree temp_path
+      end
+    end
   end
   
   def destroy name
@@ -93,11 +126,11 @@ module LXCP
       raise "Container \"" + name + "\" does not exist."
     end
     
-    unless c.running?
-      c.start
-    else
+    unless c.stopped?
       raise "This container is already running."
     end
+    
+    c.start
   end
   
   def stop name
@@ -107,11 +140,11 @@ module LXCP
       raise "Container \"" + name + "\" does not exist."
     end
     
-    unless !c.running?
-      c.stop
-    else
+    unless c.running?
       raise "This container is already stopped."
     end
+    
+    c.stop
   end
   
   def freeze name
@@ -167,6 +200,23 @@ module LXCP
     return containers
   end
   
+  def configure name, ip=nil
+    ip ||= determine_ip
+    gateway = @@config[:network][:address] + ".1"
+    domains = @@config[:domains].each { |v| v["$0"] = name }
+    
+    c = LXCP::Container.new name
+    c.set_config_item 'lxc.utsname', name
+    
+    c.configure_network ip, gateway
+    add_ip_to_hosts_file ip, domains
+    
+    c.set_domains domains
+    c.set_hostname domains.last
+    
+    return c
+  end
+  
   def determine_ip
     ip    = @@config[:network][:start_range]
     lines = File.readlines(@@config[:hosts_file]).find_all { |line| /^#{@@config[:network][:address]}/ =~ line }
@@ -213,11 +263,11 @@ module LXCP
   
   def remove_ip_from_hosts_file ip
     if ip.is_a?(Array)
-      ip.each { |v| remove_ip_from_hosts_file v }
+      ip.each { |val| remove_ip_from_hosts_file val }
     else
       f = File.readlines(@@config[:hosts_file])
       
-      f.reject! { /^#{ip}/ =~ item }
+      f.reject! { |line| /^#{ip}/ =~ line }
       
       File.write(@@config[:hosts_file], f.join)
     end

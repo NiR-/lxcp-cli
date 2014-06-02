@@ -10,27 +10,39 @@ module LXCP
     option :template, :default => "debian", :aliases => "t"
     def create name, ip=nil, port=80
       template = options[:template]
-      c = LXCP::create name, template, ip
-
-      unless c
-        puts "This container name is already in use."
-      else
+      
+      begin
+        c = LXCP::create name, template, ip
+        c.load_config # Why ?!?!?! (we have just saved it !)
+        
         puts "Container IP : " + c.ip_addresses.join(', ')
+      rescue LXCP::Exception => e
+        puts e.message
       end
     end
     
     desc "pack <name>", "Create an archive from an existing container. Will need to freeze the container."
     def pack name
       begin
-        LXCP::pack name
+        path = LXCP::pack name
+        size = human_readable_size File.size(path)
+        
+        puts "Container has been packed to \"" + path + "\" (" + size + ")."
       rescue LXCP::Exception => e
         puts e.message
       end
     end
     
-    desc "deploy [-p] <template> [<name>]", "Deploy a container from a previously created archive. Will (re)configure the host/container."
+    desc "deploy [-p] [<name>] <template>", "Deploy a container from a previously created archive. Will (re)configure the host/container."
     option :prod, :type => :boolean, :aliases => "p"
-    def deploy name
+    def deploy name=nil, template
+      begin
+        LXCP::deploy template, name
+        
+        puts "Container has been deployed."
+      rescue LXCP::Exception => e
+        puts e.message
+      end
     end
     
     desc "destroy <name>", "Destroy a container"
@@ -109,5 +121,19 @@ module LXCP
       puts "LXCP Version: " + LXCP::version
       puts "LXC Version: " + LXC::version
     end
+    
+    no_commands {
+      def human_readable_size size
+        if size >= 1 << 30
+          size = (size / (1 << 30)).round(2).to_s + " GB"
+        elsif size >= 1 << 20
+          size = (size / (1 << 20)).round(2).to_s + " MB"
+        elsif size >= 1 << 10
+          size = (size / (1 << 10)).round(2).to_s + " KB"
+        else
+          size = size.to_s + " bytes"
+        end
+      end
+    }
   end
 end
