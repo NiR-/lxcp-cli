@@ -11,83 +11,61 @@ module LXCP
     def create name, ip=nil, port=80
       template = options[:template]
       
-      begin
-        c = LXCP::create name, template, ip
-        c.load_config # Why ?!?!?! (we have just saved it !)
+      c = LXCP::create name, template, ip
+      c.load_config # Why ?!?!?! (we have just saved it !)
         
-        puts "Container IP : " + c.ip_addresses.join(', ')
-      rescue LXCP::Exception => e
-        puts e.message
-      end
+      puts "Container IP : " + c.ip_addresses.join(', ')
     end
     
     desc "pack <name>", "Create an archive from an existing container. Will need to freeze the container."
     def pack name
-      begin
-        path = LXCP::pack name
-        size = human_readable_size File.size(path)
-        
-        puts "Container has been packed to \"" + path + "\" (" + size + ")."
-      rescue LXCP::Exception => e
-        puts e.message
-      end
+      path = LXCP::pack name
+      size = human_readable_size File.size(path)
+      
+      puts "Container has been packed to \"" + path + "\" (" + size + ")."
     end
     
     desc "deploy [-p] [<name>] <template>", "Deploy a container from a previously created archive. Will (re)configure the host/container."
     option :prod, :type => :boolean, :aliases => "p"
     def deploy name=nil, template
-      begin
-        LXCP::deploy template, name
-        
-        puts "Container has been deployed."
-      rescue LXCP::Exception => e
-        puts e.message
-      end
+      LXCP::deploy template, name
+      
+      puts "Container has been deployed."
     end
     
     desc "destroy <name>", "Destroy a container"
     def destroy name
       LXCP::destroy(name)
-    
+      
       puts "Container successfully deleted."
     end
     
     desc "start <name>", "Start the given container"
     def start name
       c = LXCP::start name
-      
-      if c
-        puts "Container started. IP: " + c.ip_addresses.join(', ')
-      end
+    
+      puts "Container started. IP: " + c.ip_addresses.join(', ')
     end
     
     desc "stop <name>", "Stop the given container"
     def stop name
       c = LXCP::stop name
-      
-      if c
-        puts "Container stopped."
-      end
+    
+      puts "Container stopped."
     end
     
     desc "freeze <name>", "Freeze the container."
     def freeze name
-      begin
-        LXCP::freeze name
-        puts "The container has been frozen."
-      rescue LXCP::Exception => e
-        puts e.message
-      end
+      LXCP::freeze name
+      
+      puts "The container has been frozen."
     end
     
     desc "unfreeze <name>", "Unfreeze the container."
     def unfreeze name
-      begin
-        LXCP::unfreeze name
-        puts "The container has been unfrozen."
-      rescue LXCP::Exception => e
-        puts e.message
-      end
+      LXCP::unfreeze name
+      
+      puts "The container has been unfrozen."
     end
     
     desc "autostart <name>", "Toggle the autostart flag"

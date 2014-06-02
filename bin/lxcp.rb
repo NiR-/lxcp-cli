@@ -4,6 +4,7 @@ require 'English'
 $LOAD_PATH.unshift File.dirname(__FILE__)
 
 require './lxcp/cli.rb'
+require './lxcp/exception.rb'
 
 # LXCP need to be run with root privileges
 if ENV['USER'] != "root"
@@ -11,4 +12,8 @@ if ENV['USER'] != "root"
   exit 1
 end
 
-LXCP::CLI.start(ARGV)
+begin
+  LXCP::CLI.start(ARGV)
+rescue LXCP::Exception => e
+  puts e.message
+end

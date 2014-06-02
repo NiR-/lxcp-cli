@@ -107,7 +107,7 @@ module LXCP
     c = Container.new name
     
     if !c.defined?
-      raise "Container \"" + name + "\" does not exist."
+      raise Exception, "Container \"" + name + "\" does not exist."
     end
     
     unless c.stopped?
@@ -123,11 +123,11 @@ module LXCP
     c = Container.new name
     
     unless c.defined?
-      raise "Container \"" + name + "\" does not exist."
+      raise Exception, "Container \"" + name + "\" does not exist."
     end
     
     unless c.stopped?
-      raise "This container is already running."
+      raise Exception, "This container is already running."
     end
     
     c.start
@@ -137,11 +137,11 @@ module LXCP
     c = Container.new name
     
     unless c.defined?
-      raise "Container \"" + name + "\" does not exist."
+      raise Exception, "Container \"" + name + "\" does not exist."
     end
     
     unless c.running?
-      raise "This container is already stopped."
+      raise Exception, "This container is already stopped."
     end
     
     c.stop
@@ -183,7 +183,7 @@ module LXCP
     c = Container.new name
     
     unless c.defined?
-      raise "Container \"" + name + "\" does not exist."
+      raise Exception, "Container \"" + name + "\" does not exist."
     end
     
     c.autostart! c.autostart?.to_i.zero?
@@ -231,7 +231,7 @@ module LXCP
   def get_global_config name=nil
     unless name.nil?
       unless @@config[:config_items].include? name
-        raise "This config item is not available. Available items: " + @@config[:config_items].join(', ')
+        raise Exception, "This config item is not available. Available items: " + @@config[:config_items].join(', ')
       else
         puts name + ": " + LXC::global_config_item(name)
       end
@@ -242,7 +242,7 @@ module LXCP
   
   def set_global_config name, value
     unless @@config[:config_items].include? name
-      raise "This config item is not available. Available items: " + @@config[:config_items].join(', ')
+      raise Exception, "This config item is not available. Available items: " + @@config[:config_items].join(', ')
     else
       f = File.read(@@config[:config_path])
       val = name + ' = ' + value 
